@@ -104,10 +104,6 @@ PropString applyExtraBeamsProp(0, noYes, T("|Apply extra beams|"));
 applyExtraBeamsProp.setCategory(categories[2]);
 applyExtraBeamsProp.setDescription(T("|Specifies whether extra beams have to be applied.|"));
 
-//PropString useDefaultStudProp(2, noYes, T("|Use the size of the default beam|"));
-//useDefaultStudProp.setCategory(categories[2]);
-//useDefaultStudProp.setDescription(T("|Gets the size of the default beam tied to the element type|"));
-//
 PropDouble extraBeamWidthProp(0, 0, T("|Width of the extra beam|"));
 extraBeamWidthProp.setCategory(categories[2]);
 extraBeamWidthProp.setDescription(T("|Specifies width of the extra beams|"));
@@ -118,6 +114,15 @@ extraBeamHeightProp.setDescription(T("|Specifies height of the extra beams|"));
 
 String beamCodeExtraBeam = "ETL;;;;;;;;NO;;;;;";
 
+String insideOutside[] = 
+{ 
+	T("|Inside|"),
+	T("|Outside|")
+};
+
+PropString insideOutsideProp(2, insideOutside, T("|Location of extra beam|"));
+insideOutsideProp.setCategory(categories[2]);
+insideOutsideProp.setDescription(T("|Specifies if the extra beams should be placed on the inside or outside.|"));
 
 // Set properties if inserted with an execute key
 String catalogNames[] = TslInst().getListOfCatalogNames(scriptName());
@@ -243,15 +248,13 @@ if( _bOnElementConstructed || manualInserted || _bOnDebug) {
 		Point3d lstPoints[0];
 		int lstPropInt[0];
 		double lstPropDouble[2]; 
-		String lstPropString[2]; 
+		String lstPropString[3]; 
 		
 		lstPropString[0] = applyExtraBeamsProp; //reportNotice(TN(applyExtraBeamsProp));
-		
-		lstPropString[1] = elementFilter; //reportNotice(TN(elementFilter));
-//		lstPropString[2] = useDefaultStudProp; reportNotice(TN(useDefaultStudProp));
+		lstPropString[1] = elementFilter; 
+		lstPropString[2] = insideOutsideProp; 
 		
 		lstPropDouble[0] = extraBeamWidthProp;
-//		lstPropDouble[1] = extraBeamHeightProp;
 		lstPropDouble[1] = extraBeamHeightProp;
 		
 		
@@ -310,6 +313,7 @@ assignToElementGroup(el, TRUE, 0, 'T');
 
 // resolve props
 int applyExtraBeams = noYes.find(applyExtraBeamsProp, 0);
+int bOutside = insideOutside.find(insideOutsideProp, 0);
 
 //Opening shape
 PLine plOp = op.plShape();
@@ -611,14 +615,14 @@ double heightExtraBeam = extraBeamWidthProp;
 
 
 
-int useDefaultStud; 
-if(extraBeamHeightProp == 0 || extraBeamWidthProp == 0)
-{
-	heightExtraBeam = el.dBeamWidth();
-	widthExtraBeam = el.dBeamHeight();
-	useDefaultStud = 1;
-}
-
+//int useDefaultStud; 
+//if(extraBeamHeightProp == 0 || extraBeamWidthProp == 0)
+//{
+//	heightExtraBeam = el.dBeamWidth();
+//	widthExtraBeam = el.dBeamHeight();
+//	useDefaultStud = 1;
+//}
+//
 //widthExtraBeam = U(21);
 //heightExtraBeam = U(45);
 //
@@ -637,8 +641,20 @@ if (_kExecuteKey == toggleExtraBeamsCommand || _kExecuteKey == doubleClickAction
 
 Beam extraBeams[0];
 
-if (applyExtraBeams && (widthExtraBeam > 0 && heightExtraBeam > 0))
+if (applyExtraBeams )
 {
+	//&& (widthExtraBeam > 0 && heightExtraBeam > 0)
+	if (widthExtraBeam == 0) 
+	{
+		extraBeamWidthProp.set(el.dBeamHeight());
+		widthExtraBeam = extraBeamWidthProp;
+	}
+	if (heightExtraBeam == 0) 
+	{
+		extraBeamHeightProp.set(el.dBeamWidth());
+		heightExtraBeam = extraBeamHeightProp;
+		
+	}
 	
 	Map mapCreatedEntities;
 	
@@ -1209,13 +1225,11 @@ M&(4444`%%%%`!1110`4444`%%%%`!1110`4444`%%%%`!1110`4444`%%%%`
 <?xml version="1.0" encoding="utf-16"?>
 <Hsb_Map>
   <lst nm="TslIDESettings">
-    <lst nm="TSLIDESETTINGS">
-      <lst nm="HOSTSETTINGS">
-        <dbl nm="PREVIEWTEXTHEIGHT" ut="L" vl="1" />
-      </lst>
-      <lst nm="{E1BE2767-6E4B-4299-BBF2-FB3E14445A54}">
-        <lst nm="BREAKPOINTS" />
-      </lst>
+    <lst nm="HOSTSETTINGS">
+      <dbl nm="PREVIEWTEXTHEIGHT" ut="L" vl="1" />
+    </lst>
+    <lst nm="{E1BE2767-6E4B-4299-BBF2-FB3E14445A54}">
+      <lst nm="BREAKPOINTS" />
     </lst>
   </lst>
   <lst nm="TslInfo">
