@@ -688,7 +688,7 @@ if (applyExtraBeams )
 				Point3d beamOrigin = beamOrigins[i];
 				
 				Beam extraBeam;
-				extraBeam.dbCreate(beamOrigin, elY, - elX, elZ, U(100), widthExtraBeam, heightExtraBeam, - 1, 0, 0);
+				extraBeam.dbCreate(beamOrigin, elY, elX, elZ, U(100), widthExtraBeam, heightExtraBeam, - 1, 0, 0);
 				extraBeam.setColor(5);
 				extraBeam.setBeamCode(beamCodeExtraBeam);
 				extraBeam.setModule(sill.module());
@@ -765,7 +765,9 @@ if (applyExtraBeams )
 				Point3d beamOrigin = beamOrigins[i];
 				
 				Beam extraBeam;
-				extraBeam.dbCreate(beamOrigin, elY, - elX, elZ, U(100), widthExtraBeam, heightExtraBeam, 1, 0, 0);
+//				extraBeam.dbCreate(beamOrigin, elY, elX, elZ, U(100), widthExtraBeam, heightExtraBeam, - 1, 0, 0);
+				
+				extraBeam.dbCreate(beamOrigin, - elY, elX, elZ, U(100), widthExtraBeam, heightExtraBeam, - 1, 0, 0);
 				extraBeam.setColor(5);
 				extraBeam.setBeamCode(beamCodeExtraBeam);
 				extraBeam.setModule(transom.module());
