@@ -14,6 +14,12 @@ No transform on the header if it's 30x120 (It needs to be at opening for the pla
 AS - 2.16 - 19.03.2020 - 
 Correct properties
 
+OR - 2.17 - 27.05.2020 -
+Width and height is now correctly assigned
+
+OR - 2.18 - 27.05.2020 - 
+Option to move to outside of opening
+
 
 
 
@@ -26,7 +32,7 @@ Correct properties
 #ImplInsert 1
 #FileState 1
 #MajorVersion 2
-#MinorVersion 16
+#MinorVersion 18
 #KeyWords 
 #BeginContents
 
@@ -70,6 +76,8 @@ Correct properties
 /// OR - 2.14 - 15.01.2020 - Don't move the header if it's 30x120 (For opening plate)
 /// OR - 2.15 - 17.03.2020 - Internal walls skips both headers and integrate beams and picks the horizontal beam over opening (DRÖ)
 /// AS - 2.16 - 19.03.2020 - Correct properties
+/// OR - 2.17 - 27.05.2020 - Width and height is now correctly assigned
+/// OR - 2.18 - 27.05.2020 - Option to move to outside of opening
 /// </history>
 
 //Script uses mm
@@ -267,6 +275,10 @@ if( _bOnElementConstructed || manualInserted || _bOnDebug) {
 			OpeningSF opening = (OpeningSF)openings[i];
 			if (!opening.bIsValid()) continue;
 			
+			Map opMapX = opening.subMapX("REVITID");
+			String sOpeningType = opMapX.getString("CATEGORY");
+			mapTsl.setString("OpeningType", sOpeningType);
+			
 			lstEntities[0] = opening;
 	
 			TslInst tsl;
@@ -440,22 +452,9 @@ if ((headers.length() == 0 && openingIsInAGarage) )
 		allBeamsExceptHeaders = header.filterGenBeamsNotThis(allBeamsExceptHeaders); 
 	}
 }
-//else if (headers.length() == 0 && el.code().left(1) == "D")
-//{
-//	headers.append(arBmOverDoor);
-//	//arBmIntegrate.setLength(0);
-//	
-//	
-//	for (int h=0;h<headers.length();h++)
-//	{
-//		Beam header = headers[h];
-//		allBeamsExceptHeaders = header.filterGenBeamsNotThis(allBeamsExceptHeaders); 
-//	}
-//}
 else if (headers.length() == 0 && openingWithoutHeader)
 {
 	headers.append(arBmIntegrate);
-	//arBmIntegrate.setLength(0);
 	
 	for (int h=0;h<headers.length();h++)
 	{
@@ -472,7 +471,6 @@ if( _bOnWriteEnabled && (_kExecuteKey==deleteHeaderCommand || (headers.length() 
 		Beam header = headers[i];
 		header.dbErase();
 	}
-	//reportMessage(TN("|TSL removed|"));
 	eraseInstance();
 	return;
 }
@@ -613,21 +611,6 @@ _Map.removeAt("CreatedEntity[]", true);
 double widthExtraBeam =extraBeamHeightProp ;
 double heightExtraBeam = extraBeamWidthProp;
 
-
-
-//int useDefaultStud; 
-//if(extraBeamHeightProp == 0 || extraBeamWidthProp == 0)
-//{
-//	heightExtraBeam = el.dBeamWidth();
-//	widthExtraBeam = el.dBeamHeight();
-//	useDefaultStud = 1;
-//}
-//
-//widthExtraBeam = U(21);
-//heightExtraBeam = U(45);
-//
-
-
 String materialExtraBeam = "Extra trälist";
 
 String toggleExtraBeamsCommand = applyExtraBeams ? T("|Disable extra beams|") : T("|Enable extra beams|");
@@ -641,17 +624,21 @@ if (_kExecuteKey == toggleExtraBeamsCommand || _kExecuteKey == doubleClickAction
 
 Beam extraBeams[0];
 
-if (applyExtraBeams )
+//reportNotice("\nWidth:" + el.dBeamWidth());
+//reportNotice("\Height:" + el.dBeamHeight());
+String OpeningType = _Map.getString("OpeningType");
+
+
+if (applyExtraBeams && (OpeningType.makeUpper() != "DOORS" && bOutside) )
 {
-	//&& (widthExtraBeam > 0 && heightExtraBeam > 0)
 	if (widthExtraBeam == 0) 
 	{
-		extraBeamWidthProp.set(el.dBeamHeight());
+		extraBeamWidthProp.set(el.dBeamWidth());
 		widthExtraBeam = extraBeamWidthProp;
 	}
 	if (heightExtraBeam == 0) 
 	{
-		extraBeamHeightProp.set(el.dBeamWidth());
+		extraBeamHeightProp.set(el.dBeamHeight());
 		heightExtraBeam = extraBeamHeightProp;
 		
 	}
@@ -670,9 +657,17 @@ if (applyExtraBeams )
 				sillX *= -1;
 			}
 			Point3d leftOrigin = sill.ptCenSolid() - sill.vecX() * 0.5 * (sill.solidLength() - widthExtraBeam);
+			if(bOutside)
+			{ 
+				leftOrigin = leftOrigin - sill.vecX() * (el.dBeamHeight() + widthExtraBeam);
+			}
 			leftOrigin -= elY * 0.5 * sill.dD(elY);
 			leftOrigin -= elZ * 0.5 * (sill.dD(elZ) - heightExtraBeam);
 			Point3d rightOrigin = sill.ptCenSolid() + sill.vecX() * 0.5 * (sill.solidLength() - widthExtraBeam);
+			if(bOutside)
+			{ 
+				rightOrigin = rightOrigin + sill.vecX() * (el.dBeamHeight() + widthExtraBeam);
+			}
 			rightOrigin -= elY * 0.5 * sill.dD(elY);
 			rightOrigin -= elZ * 0.5 * (sill.dD(elZ) - heightExtraBeam);
 			
@@ -694,33 +689,77 @@ if (applyExtraBeams )
 				extraBeam.setModule(sill.module());
 				extraBeam.setSubLabel2(sill.subLabel2());
 				extraBeam.setMaterial(materialExtraBeam);
+				if(bOutside) 
+				{
+					extraBeam.setModule("");
+				}
 				extraBeams.append(extraBeam);
 				
-				Beam beamsToStretchTo[] = extraBeam.filterBeamsHalfLineIntersectSort(horizontalBeams, beamOrigin - elY * U(110), - elY);
-				if (beamsToStretchTo.length() > 0)
+				
+				
+				if(bOutside)
 				{
-					extraBeam.stretchStaticTo(beamsToStretchTo[0], _kStretchOnToolChange);
+					Beam beamsToStretchTo[0];
+					Beam arBm[] = el.beam();
+					
+					for (int b = 0; b < arBm.length(); b++) {
+						Beam bm = arBm[b];
+						
+						if (bm.type() == _BeamTypes.find("SF Top Plate") || bm.type() == _BeamTypes.find("SF Bottom Plate"))
+						{
+							beamsToStretchTo.append(bm);
+						}
+					}
+					
+					if(beamsToStretchTo.length() > 2)
+					{ 
+						Beam sortedBm[0];
+						Beam temp[0];
+						sortedBm = Beam().filterBeamsHalfLineIntersectSort(beamsToStretchTo, beamOrigin, elY);
+						temp.append(sortedBm[0]);
+						sortedBm[0].setColor(2);
+						sortedBm = Beam().filterBeamsHalfLineIntersectSort(beamsToStretchTo, beamOrigin, - elY);
+						temp.append(sortedBm[0]);
+						sortedBm[0].setColor(2);
+						beamsToStretchTo = temp;
+					}
+					
+						extraBeam.stretchStaticTo(beamsToStretchTo[0], _kStretchOnToolChange);
+						extraBeam.stretchStaticTo(beamsToStretchTo[1], _kStretchOnToolChange);
 				}
+				else
+				{
+					Beam beamsToStretchTo[] = extraBeam.filterBeamsHalfLineIntersectSort(horizontalBeams, beamOrigin - elY * U(110), - elY);
+					if (beamsToStretchTo.length() > 0)
+					{
+						extraBeam.stretchStaticTo(beamsToStretchTo[0], _kStretchOnToolChange);
+					}
+				}
+				
 				
 				extraBeam.assignToElementGroup(el, true, 0, 'Z');
 				mapCreatedEntities.appendEntity("CreatedEntity", extraBeam);
 			}
 		}
 		
+		if(!bOutside)
+		{
+			
+			Point3d startExtraBeam = openingCenter - shrinkFactor * (elX * 0.5 * openingWidth + elY * 0.5 * openingHeight + elZ * 0.5 * frameThickness);
+			PLine extraBeamXY(elZ);
+			extraBeamXY.addVertex(startExtraBeam - elY * shrinkFactor * 0.75 * openingHeight);
+			extraBeamXY.addVertex(startExtraBeam);
+			extraBeamXY.addVertex(startExtraBeam + elX * shrinkFactor * widthExtraBeam);
+			extraBeamXY.addVertex(startExtraBeam + elX * shrinkFactor * widthExtraBeam - elY * shrinkFactor * 0.75 * openingHeight);
+			dp.draw(extraBeamXY);
+			extraBeamXY.transformBy(elZ * shrinkFactor * heightExtraBeam);
+			dp.draw(extraBeamXY);
+			extraBeamXY.transformBy(elX * shrinkFactor * (openingWidth - widthExtraBeam));
+			dp.draw(extraBeamXY);
+			extraBeamXY.transformBy(-elZ * shrinkFactor * heightExtraBeam);
+			dp.draw(extraBeamXY);
+		}
 		
-		Point3d startExtraBeam = openingCenter - shrinkFactor * (elX * 0.5 * openingWidth + elY * 0.5 * openingHeight + elZ * 0.5 * frameThickness);
-		PLine extraBeamXY(elZ);
-		extraBeamXY.addVertex(startExtraBeam - elY * shrinkFactor * 0.75 * openingHeight);
-		extraBeamXY.addVertex(startExtraBeam);
-		extraBeamXY.addVertex(startExtraBeam + elX * shrinkFactor * widthExtraBeam);
-		extraBeamXY.addVertex(startExtraBeam + elX * shrinkFactor * widthExtraBeam - elY * shrinkFactor * 0.75 * openingHeight);
-		dp.draw(extraBeamXY);
-		extraBeamXY.transformBy(elZ * shrinkFactor * heightExtraBeam);
-		dp.draw(extraBeamXY);
-		extraBeamXY.transformBy(elX * shrinkFactor * (openingWidth - widthExtraBeam));
-		dp.draw(extraBeamXY);
-		extraBeamXY.transformBy(-elZ * shrinkFactor * heightExtraBeam);
-		dp.draw(extraBeamXY);
 	}
 	
 		
@@ -781,7 +820,7 @@ if (applyExtraBeams )
 					extraBeam.stretchStaticTo(beamsToStretchTo[0], _kStretchOnToolChange);
 				}
 				
-				if (openingIsInAGarage || extraBeam.solidLength() > U(300) || el.code().left(1) == "D")
+				if ((openingIsInAGarage || extraBeam.solidLength() > U(300) || el.code().left(1) == "D") && !bOutside)
 				{
 					extraBeam.assignToElementGroup(el, true, 0, 'Z');
 					mapCreatedEntities.appendEntity("CreatedEntity", extraBeam);
@@ -1227,11 +1266,11 @@ M&(4444`%%%%`!1110`4444`%%%%`!1110`4444`%%%%`!1110`4444`%%%%`
 <?xml version="1.0" encoding="utf-16"?>
 <Hsb_Map>
   <lst nm="TslIDESettings">
-    <lst nm="HOSTSETTINGS">
-      <dbl nm="PREVIEWTEXTHEIGHT" ut="L" vl="1" />
+    <lst nm="HostSettings">
+      <dbl nm="PreviewTextHeight" ut="L" vl="1" />
     </lst>
     <lst nm="{E1BE2767-6E4B-4299-BBF2-FB3E14445A54}">
-      <lst nm="BREAKPOINTS" />
+      <lst nm="BreakPoints" />
     </lst>
   </lst>
   <lst nm="TslInfo">

@@ -1,4 +1,4 @@
-SB behöver extra trälist på utsidan av delelement. Den kommer även vara fullbredd.
+SB behÃ¶ver extra trÃ¤list pÃ¥ utsidan av delelement. Den kommer ï¿½ven vara fullbredd.
 
-*Om bredd är 0 används väggens regel bredd och samma sak med höjd.
-*Alternativ för insida/utsida 
+*Om bredd ï¿½r 0 anvï¿½nds vï¿½ggens regel bredd och samma sak med hï¿½jd.
+*Alternativ fï¿½r insida/utsida
